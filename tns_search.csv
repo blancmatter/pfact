@@ -1,5 +1,5 @@
 "ID","Name","RA","DEC","Obj. Type","Redshift","Host Name","Host Redshift","Discovering Group/s","Classifying Group/s","Associated Group/s","Disc. Internal Name","Disc. Instrument/s","Class. Instrument/s","TNS AT","Public","End Prop. Period","Discovery Mag","Discovery Mag Filter","Discovery Date (UT)","Sender","Remarks","Ext. catalog/s"
-"44200","AT 2019ozd","17:31:29.800","-71:13:53.83","","","","","GaiaAlerts","","GaiaAlerts","Gaia19dvb","Gaia - Gaia-photometric","","1","1","","17.44","G-Gaia","2019-08-26 19:37:55","Gaia_Bot1","",""
+"44200","AT 2019ozd","18:31:29.800","+38:13:53.83","","","","","GaiaAlerts","","GaiaAlerts","Gaia19dvb","Gaia - Gaia-photometric","","1","1","","17.44","G-Gaia","2019-08-26 09:37:55","Gaia_Bot1","",""
 "44199","AT 2019ozc","07:36:49.900","-27:28:03.04","","","","","GaiaAlerts","","GaiaAlerts","Gaia19dva","Gaia - Gaia-photometric","","1","1","","18.29","G-Gaia","2019-08-27 06:12:57","Gaia_Bot1","",""
 "44198","AT 2019ozb","13:44:41.858","-29:54:11.92","","","","","ASAS-SN","","ASAS-SN","ASASSN-19vj","ASASSN-2 - Cassius","","1","1","","17.5","g-Sloan","2019-08-29 23:31:12","Stanek","",""
 "44197","AT 2019oza","02:11:40.870","+28:15:11.40","","","","","ATLAS","","ATLAS","ATLAS19twn","ATLAS1 - ACAM1","","1","1","","19.337","cyan-ATLAS","2019-08-28 11:51:21","ATLAS_Bot1","",""
