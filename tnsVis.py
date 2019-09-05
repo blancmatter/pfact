@@ -13,15 +13,115 @@ class tnsVis():
     Object visability methods for calculating airmass, lengths of observable time for transient name server objects for different observing locations and dates
     """
 
-    def __init__(self, lat, lon, elevation, ra, dec, date):
+    def __init__(self, lat, lon, elevation, ra, dec, discDate):
         self.location = EarthLocation(lat=lat, lon=lon, height=elevation*u.m)
-        self.date = date
+        self.discDate = discDate
         self.observer = Observer(location = self.location, name="LT")
         self.target = SkyCoord(ra=ra, dec=dec, unit=(u.hourangle, u.deg))
         self.constraints = [AirmassConstraint(1.5), AtNightConstraint.twilight_astronomical()]
 
 
+    def time_since_discovery(self):
+        """
+        Returns astropy Time object of time since Discovery
+        """
+        return Time.now()-self.discDate
 
+
+    def visible_time(self, date):
+        """
+        For the evening after the date, specify the visible time within the constraints
+        """
+
+        # Find astronomical times for next night
+        darkStart = self.observer.twilight_evening_astronomical(date, which=u'next')
+        darkEnd = self.observer.twilight_morning_astronomical(darkStart,which=u'next')
+
+        # Find rise and set times
+        riseTime = self.observer.target_rise_time(Time.now(), self.target, which=u'next', horizon=40*u.deg)
+        setTime = self.observer.target_set_time(Time.now(), self.target, which=u'next', horizon=40*u.deg)
+
+        if (darkStart.value < riseTime.value) and (darkEnd.value > setTime.value):
+            print ("During night")
+            return setTime-riseTime
+
+
+    def plot(self, date):
+        """
+        Produce plot of the object visability for date
+        Modified from https://docs.astropy.org/en/stable/generated/examples/coordinates/plot_obs-planning.html
+        """
+
+        import matplotlib.pyplot as plt
+        from astropy.visualization import astropy_mpl_style
+        plt.style.use(astropy_mpl_style)
+
+        t = date.copy()
+        midnight = t
+        delta_midnight = np.linspace(-2, 10, 100)*u.hour
+        frame_night = AltAz(obstime=midnight+delta_midnight,
+                                  location=self.location)
+        targetaltazs_night = self.target.transform_to(frame_night)
+
+
+        ##############################################################################
+        # Use  `~astropy.coordinates.get_sun` to find the location of the Sun at 1000
+
+
+        from astropy.coordinates import get_sun
+        delta_midnight = np.linspace(-12, 12, 1000)*u.hour
+        times = midnight + delta_midnight
+        frame = AltAz(obstime=times, location=self.location)
+        sunaltazs = get_sun(times).transform_to(frame)
+
+
+        ##############################################################################
+        # Do the same with `~astropy.coordinates.get_moon` to find when the moon is
+        # up. Be aware that this will need to download a 10MB file from the internet
+        # to get a precise location of the moon.
+
+        from astropy.coordinates import get_moon
+        moon = get_moon(times)
+        moonaltazs = moon.transform_to(frame)
+
+        ##############################################################################
+        # Find the alt,az coordinates of M33 at those same times:
+
+        targetaltazs = self.target.transform_to(frame)
+
+        ##############################################################################
+        # Make a beautiful figure illustrating nighttime and the altitudes of M33 and
+        # the Sun over that time:
+
+        plt.plot(delta_midnight, sunaltazs.alt, color='r', label='Sun')
+        plt.plot(delta_midnight, moonaltazs.alt, color=[0.75]*3, ls='--', label='Moon')
+        plt.scatter(delta_midnight, targetaltazs.alt,
+                    c=targetaltazs.az, label='Target', lw=0, s=8,
+                    cmap='viridis')
+        plt.fill_between(delta_midnight.to('hr').value, 0, 90,
+                         sunaltazs.alt < -0*u.deg, color='0.5', zorder=0)
+        plt.fill_between(delta_midnight.to('hr').value, 0, 90,
+                         sunaltazs.alt < -18*u.deg, color='k', zorder=0)
+        plt.colorbar().set_label('Azimuth [deg]')
+        plt.legend(loc='upper left')
+        plt.xlim(-12, 12)
+        plt.xticks(np.arange(13)*2 -12)
+        plt.ylim(0, 90)
+        plt.xlabel('Hours from UTC Midnight')
+        plt.ylabel('Altitude [deg]')
+        plt.show()
+
+
+    def get_info(self, date):
+        """
+        Prints useful info for a given time, for debugging mainly
+        Alt - Az of target
+        Alt - Az of sun
+        Alt - Az of moon
+        .....
+        """
+
+        return
 
     def getDark(self, date):
         """
@@ -46,7 +146,7 @@ class tnsVis():
         Returns the amount of time the object is above given airmass
         """
 
-        objVis = is_observable(self.constraints, self.LT, self.target, time_range=(self.date, self.date+1*u.day))
+        objVis = is_observable(self.constraints, self.observer, self.target, time_range=(self.discDate, self.discDate+1*u.day))
 
         return objVis
 
@@ -58,11 +158,6 @@ class tnsVis():
         Return the highest airmass observable for the object and time above a
         specified airmass for a specific night
         """
-
-
-
-
-
 
         return
 
