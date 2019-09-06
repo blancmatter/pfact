@@ -23,7 +23,7 @@ class tnsVis():
 
     def time_since_discovery(self):
         """
-        Returns astropy Time object of time since Discovery
+        Returns astropy Time delta object of time since Discovery to time now
         """
         return Time.now()-self.discDate
 
@@ -56,8 +56,7 @@ class tnsVis():
         from astropy.visualization import astropy_mpl_style
         plt.style.use(astropy_mpl_style)
 
-        t = date.copy()
-        midnight = t
+        midnight = self.observer.midnight(date, which='next')
         delta_midnight = np.linspace(-2, 10, 100)*u.hour
         frame_night = AltAz(obstime=midnight+delta_midnight,
                                   location=self.location)
@@ -107,7 +106,7 @@ class tnsVis():
         plt.xlim(-12, 12)
         plt.xticks(np.arange(13)*2 -12)
         plt.ylim(0, 90)
-        plt.xlabel('Hours from UTC Midnight')
+        plt.xlabel('Hours from Local Midnight')
         plt.ylabel('Altitude [deg]')
         plt.show()
 
@@ -185,8 +184,8 @@ def main():
             print(ra, dec)
             print(row['Discovery Date (UT)'])
             print(object.getDark(discDate))
-            print(object.objVis(2, discDate))
-            exit()
+            print(object.objVis())
+            object.plot(discDate)
 
 if __name__== "__main__":
     main()
