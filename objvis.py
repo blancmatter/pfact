@@ -8,7 +8,7 @@ dec = '+10:00:53'
 
 discDate = Time.strptime(time, "%Y-%m-%d %H:%M:%S")
 
-vis = tnsVis.tnsVis(28.762, -17.879, 2363, ra, dec, discDate)
+vis = tnsVis.tnsVis(28.762, -17.879, 2363, ra, dec, discDate, airmassConstraint=2)
 
 print (vis.objVis())
 diffdate = vis.time_since_discovery()

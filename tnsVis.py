@@ -1,24 +1,31 @@
 import csv, sys
 import datetime
 import numpy as np
+import math
 from astropy.coordinates import EarthLocation,SkyCoord, AltAz
 from astropy.time import Time
 from astropy import units as u
 from astroplan import Observer, AirmassConstraint, AtNightConstraint, TimeConstraint, is_observable, is_always_observable
+from astroplan import download_IERS_A
 
 
 
 class tnsVis():
     """
-    Object visability methods for calculating airmass, lengths of observable time for transient name server objects for different observing locations and dates
+    Object visability methods for calculating airmass, lengths of observable
+    time for transient name server objects for different observing locations
+    and dates
     """
 
-    def __init__(self, lat, lon, elevation, ra, dec, discDate):
+    def __init__(self, lat, lon, elevation, ra, dec, discDate, airmassConstraint=1.5):
+        self.airmassConstraint = airmassConstraint
+        self.altConstraint = math.degrees(math.asin(1/self.airmassConstraint))
         self.location = EarthLocation(lat=lat, lon=lon, height=elevation*u.m)
         self.discDate = discDate
         self.observer = Observer(location = self.location, name="LT")
         self.target = SkyCoord(ra=ra, dec=dec, unit=(u.hourangle, u.deg))
-        self.constraints = [AirmassConstraint(1.5), AtNightConstraint.twilight_astronomical()]
+        self.constraints = [AirmassConstraint(self.airmassConstraint), AtNightConstraint.twilight_astronomical()]
+        print ("Discovery Date :", discDate.value)
 
 
     def time_since_discovery(self):
@@ -30,21 +37,38 @@ class tnsVis():
 
     def visible_time(self, date):
         """
-        For the evening after the date, specify the visible time within the constraints
+        For the evening after the date, specify the visible time within the
+        constraintsself.
+
+        Not really working at present
         """
+
 
         # Find astronomical times for next night
         darkStart = self.observer.twilight_evening_astronomical(date, which=u'next')
         darkEnd = self.observer.twilight_morning_astronomical(darkStart,which=u'next')
 
         # Find rise and set times
-        riseTime = self.observer.target_rise_time(Time.now(), self.target, which=u'next', horizon=40*u.deg)
-        setTime = self.observer.target_set_time(Time.now(), self.target, which=u'next', horizon=40*u.deg)
+        riseTime = self.observer.target_rise_time(date, self.target,
+        which=u'next', horizon=self.altConstraint*u.deg)
+        setTime = self.observer.target_set_time(date, self.target,
+        which=u'next', horizon=self.altConstraint*u.deg)
 
         if (darkStart.value < riseTime.value) and (darkEnd.value > setTime.value):
             print ("During night")
             return setTime-riseTime
 
+        elif (darkStart.value > riseTime.value) and (darkEnd.value > setTime.value):
+            print("Darkstart")
+
+        elif (darkStart.value < riseTime.value) and (darkEnd.value < setTime.value):
+            print("Darkend")
+
+        elif (darkStart.value > riseTime.value) and (darkEnd.value < setTime.value):
+            print("DarkstartandEnd")
+
+        else:
+            print("No Constraints matched!!")
 
     def plot(self, date):
         """
@@ -101,6 +125,7 @@ class tnsVis():
                          sunaltazs.alt < -0*u.deg, color='0.5', zorder=0)
         plt.fill_between(delta_midnight.to('hr').value, 0, 90,
                          sunaltazs.alt < -18*u.deg, color='k', zorder=0)
+        plt.hlines(self.altConstraint, -12, 12, colors='red', linestyles='dotted', lw=1)
         plt.colorbar().set_label('Azimuth [deg]')
         plt.legend(loc='upper left')
         plt.xlim(-12, 12)
@@ -122,30 +147,14 @@ class tnsVis():
 
         return
 
-    def getDark(self, date):
-        """
-        Returns the start and end of astronomical dark time,
-        for a given date. Dark time is defined as the time that the sun is -18 degrees below the horizon
-
-        Uses the astroplan
-
-        @param  date
-        @return list - [startDate, endDate]
-        """
-
-        t_eve = self.observer.twilight_evening_astronomical(date, which=u'next')
-        t_morn = self.observer.twilight_morning_astronomical(date,which=u'next')
-
-        return (t_eve, t_morn)
-
-
     def objVis(self):
         """
         Checks if transit is in between twilight hours. If not return error
         Returns the amount of time the object is above given airmass
         """
 
-        objVis = is_observable(self.constraints, self.observer, self.target, time_range=(self.discDate, self.discDate+1*u.day))
+        objVis = is_observable(self.constraints, self.observer, self.target,
+                 time_range=(self.discDate, self.discDate+1*u.day))
 
         return objVis
 
@@ -164,28 +173,73 @@ class tnsVis():
 
 
 def main():
-    with open('tns_search.csv', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
+    with open('tns_search.csv', newline='') as csvin:
+
+        """
+        Header list of TNS csvfile
+        """
+        headers = '"ID", \
+                   "Name", \
+                   "RA", \
+                   "DEC", \
+                   "Obj. Type", \
+                   "Redshift", \
+                   "Host Name", \
+                   "Host Redshift", \
+                   "Discovering Group/s", \
+                   "Classifying Group/s", \
+                   "Associated Group/s", \
+                   "Disc. Internal Name", \
+                   "Disc. Instrument/s", \
+                   "Class. Instrument/s", \
+                   "TNS AT", \
+                   "Public", \
+                   "End Prop. Period", \
+                   "Discovery Mag", \
+                   "Discovery Mag Filter", \
+                   "Discovery Date (UT)", \
+                   "Sender", \
+                   "Remarks", \
+                   "Ext. catalog/s"'
+
+
+        reader = csv.DictReader(csvin)
+
+
+        outtext = []
+
         for row in reader:
-            #print(row['ID'], row['RA'], row['DEC'], row['Discovery Date (UT)'],row['Discovery Mag'], row['Discovery Mag Filter'])
 
-
-            id       = row['ID']
-            name     = row['Name']
-            objType  = row['Obj. Type']
-            discDate = Time.strptime(row['Discovery Date (UT)'], "%Y-%m-%d %H:%M:%S")
-            ra       = row['RA']
-            dec      = row['DEC']
-            mag      = row['Discovery Mag']
-            magFilt  = row['Discovery Mag Filter']
+            id           = row['ID']
+            name         = row['Name']
+            ra           = row['RA']
+            dec          = row['DEC']
+            objType      = row['Obj. Type']
+            redshift     = row['Redshift']
+            hostname     = row['Host Name']
+            hostredshift = row['Host Redshift']
+            discDate     = Time.strptime(row['Discovery Date (UT)'], "%Y-%m-%d %H:%M:%S")
+            mag          = row['Discovery Mag']
+            magFilt      = row['Discovery Mag Filter']
 
             object=tnsVis(28.762, -17.879, 2363, ra, dec, discDate)
 
             print(ra, dec)
             print(row['Discovery Date (UT)'])
-            print(object.getDark(discDate))
-            print(object.objVis())
-            object.plot(discDate)
+            visibility = object.objVis()
+            print ("Visibility : ", visibility[0])
+            #object.plot(discDate)
+
+            line = [id, name, ra, dec, visibility[0]]
+            outtext.append(line)
+
+
+    with open('tns_out.csv', 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(outtext)
+
+
+
 
 if __name__== "__main__":
     main()
