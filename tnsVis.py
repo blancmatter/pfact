@@ -177,8 +177,8 @@ def main():
 
         """
         Header list of TNS csvfile
-        """
-        headers = '"ID", \
+
+        headersin = '"ID", \
                    "Name", \
                    "RA", \
                    "DEC", \
@@ -201,6 +201,9 @@ def main():
                    "Sender", \
                    "Remarks", \
                    "Ext. catalog/s"'
+
+        headersout =
+        """
 
 
         reader = csv.DictReader(csvin)
@@ -228,7 +231,7 @@ def main():
             print(row['Discovery Date (UT)'])
             visibility = object.objVis()
             print ("Visibility : ", visibility[0])
-            #object.plot(discDate)
+            object.plot(discDate)
 
             line = [id, name, ra, dec, visibility[0]]
             outtext.append(line)
