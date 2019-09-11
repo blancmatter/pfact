@@ -1,4 +1,4 @@
-import csv, sys
+import csv, sys, os, re
 import datetime
 import numpy as np
 import math
@@ -69,6 +69,34 @@ class tnsVis():
 
         else:
             print("No Constraints matched!!")
+
+    def getReportDate(self, name):
+        """
+        Input ATel name and scrape TNS web page for value using regex
+        report the in astropy datetime format??
+        """
+
+        # pull html down
+        wget = 'wget -O AT.html https://wis-tns.weizmann.ac.il/object/' + name.replace('AT ','')
+        os.system(wget)
+
+        # Open, read into string and close file and remove file
+        textfile = open('AT.html', 'r')
+        filetext = textfile.read()
+        textfile.close()
+        os.system('rm AT.html')
+
+        #find the time_received value
+        pattern = re.compile('class=\"cell-time_received\">\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d')
+        match = re.findall(pattern, filetext)[0]
+
+        # get down to YYYY-MM-DD HH:MM:SS value
+        pattern = '\d\d\d\d\-\d\d-\d\d \d\d:\d\d:\d\d'
+        reportDate = re.findall(pattern, match)[0]
+        return reportDate
+
+
+
 
     def plot(self, date):
         """
@@ -154,26 +182,15 @@ class tnsVis():
         """
 
         objVis = is_observable(self.constraints, self.observer, self.target,
-                 time_range=(self.discDate, self.discDate+1*u.day))
+                 time_range=(self.discDate, self.discDate+1*u.day))[0]
 
         return objVis
 
 
 
 
-    def obsTime(ra, dec, date, airmass, self):
-        """
-        Return the highest airmass observable for the object and time above a
-        specified airmass for a specific night
-        """
-
-        return
-
-
-
-
 def main():
-    with open('tns_search.csv', newline='') as csvin:
+    with open('15_test.dat') as csvin:
 
         """
         Header list of TNS csvfile
@@ -227,14 +244,23 @@ def main():
 
             object=tnsVis(28.762, -17.879, 2363, ra, dec, discDate)
 
-            print(ra, dec)
+            print(name, ra, dec)
+            reportDate = object.getReportDate(name)
+            print (reportDate)
+
+
             print(row['Discovery Date (UT)'])
             visibility = object.objVis()
-            print ("Visibility : ", visibility[0])
-            object.plot(discDate)
+            print ("Visibility : ", visibility)
+            #object.plot(discDate)
 
-            line = [id, name, ra, dec, visibility[0]]
-            outtext.append(line)
+            line = [id, name, ra, dec, visibility]
+
+            row.update({'Vis' : visibility})
+            row.update({'Report Date' : reportDate})
+            outtext.append(row.items())
+            print (row)
+
 
 
     with open('tns_out.csv', 'w') as writeFile:
