@@ -70,14 +70,16 @@ class tnsVis():
         else:
             print("No Constraints matched!!")
 
-    def getReportDate(self, name):
+    def reportDate(self, name):
         """
         Input ATel name and scrape TNS web page for value using regex
         report the in astropy datetime format??
         """
 
         # pull html down
-        wget = 'wget -O AT.html https://wis-tns.weizmann.ac.il/object/' + name.replace('AT ','')
+        pattern = '\d\d\d\d\w\w\w'
+
+        wget = 'wget -O AT.html https://wis-tns.weizmann.ac.il/object/' + re.findall(pattern, name)[0]
         os.system(wget)
 
         # Open, read into string and close file and remove file
@@ -95,7 +97,16 @@ class tnsVis():
         reportDate = re.findall(pattern, match)[0]
         return reportDate
 
-
+    def reportDelay(self, date):
+        """
+        Input the report date as an astropy Time object
+        return the difference between the discovery and report in units of days
+        """
+        reportDelay = date - self.discDate
+        print ("report : ", date)
+        print ("discdate : ", self.discDate)
+        print ("report.Delay : ", reportDelay)
+        return reportDelay
 
 
     def plot(self, date):
@@ -190,7 +201,7 @@ class tnsVis():
 
 
 def main():
-    with open('15_test.dat') as csvin:
+    with open('full.dat') as csvin:
 
         """
         Header list of TNS csvfile
@@ -227,7 +238,7 @@ def main():
 
 
         outtext = []
-
+        header = True
         for row in reader:
 
             id           = row['ID']
@@ -244,22 +255,22 @@ def main():
 
             object=tnsVis(28.762, -17.879, 2363, ra, dec, discDate)
 
-            print(name, ra, dec)
-            reportDate = object.getReportDate(name)
-            print (reportDate)
 
+            reportDate = object.reportDate(name)
+            reportDelay = object.reportDelay(Time.strptime(reportDate, "%Y-%m-%d %H:%M:%S"))
 
-            print(row['Discovery Date (UT)'])
-            visibility = object.objVis()
-            print ("Visibility : ", visibility)
-            #object.plot(discDate)
+            row.update({'Vis' : object.objVis()})
+            row.update({'Report Date' : object.reportDate(name)})
+            row.update({'reportDelay' : reportDelay})
+            row.update
 
-            line = [id, name, ra, dec, visibility]
+            # For first row output column headers
+            if header:
+                outtext.append(list(row.keys()))
+                header =False
 
-            row.update({'Vis' : visibility})
-            row.update({'Report Date' : reportDate})
-            outtext.append(row.items())
-            print (row)
+            outtext.append(list(row.values()))
+            print(row)
 
 
 
