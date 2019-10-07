@@ -3,24 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
-mags = []
-delay = []
-"""
-with open('tns_out.csv') as csvin:
-    reader = csv.DictReader(csvin)
-    for row in reader:
-        if 'True' in row['Vis']:
-            mags.append(row['Discovery Mag'])
-            delay.append(row['reportDelay'])
+import plotly.graph_objects as go
 
-
-print (len(mags))
-print (len(delay))
-plt.hist(mags, density=False, bins=10)
-plt.ylabel('Number');
-plt.show()
-"""
-data = pd.read_csv("tns_out.csv")
+data = pd.read_csv("tndout2.dat")
 data['Discovery Mag'] = pd.to_numeric(data['Discovery Mag'], errors='coerce')
 data['reportDelay'] = pd.to_numeric(data['reportDelay'], errors='coerce')
 
@@ -29,14 +14,22 @@ data['reportDelay'] = pd.to_numeric(data['reportDelay'], errors='coerce')
 filter = data["Vis"] == "True"
 data.where(filter, inplace=True)
 
-filter = data["Discovery Mag"] < 20
+filter = data["Discovery Mag"] < 22
 data.where(filter, inplace=True)
 
-filter = data["reportDelay"] < 5
+filter = data["reportDelay"] < 6
 data.where(filter, inplace=True)
 
-print (len(data.index))
 
-tips = px.data.tips()
-fig = px.histogram(data, x="Discovery Mag", hover_data=data.columns)
+
+#fig = px.histogram(data, x="Discovery Mag", hover_data=data.columns)
+fig = go.Figure(data=[go.Histogram(x=data["Discovery Mag"], cumulative_enabled=False)])
+fig.update_xaxes(title_text='Report Delay in days')
+fig.update_yaxes(title_text='Number')
+fig.update_layout(
+    title=go.layout.Title(
+        text="Plot Title",
+        xref="paper",
+        x=0
+    ))
 fig.show()
